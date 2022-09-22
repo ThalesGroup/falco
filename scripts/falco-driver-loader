@@ -601,9 +601,13 @@ print_usage() {
 	echo "  --source-only  skip execution and allow sourcing in another script"
 	echo ""
 	echo "Environment variables:"
-	echo "  DRIVERS_REPO             specify different URL(s) where to look for prebuilt Falco drivers (comma separated)"
-	echo "  DRIVER_NAME              specify a different name for the driver"
-	echo "  DRIVER_INSECURE_DOWNLOAD whether you want to allow insecure downloads or not"
+	echo "  DRIVERS_REPO             			 specify different URL(s) where to look for prebuilt Falco drivers (comma separated)"
+	echo "  DRIVER_NAME              			 specify a different name for the driver"
+	echo "  DRIVER_INSECURE_DOWNLOAD 			 whether you want to allow insecure downloads or not"
+	echo "  DRIVERS_REPO_IS_PRIVATE_CACERT 		 boolean, whether you want to use a custom CAcert for curl"
+	echo "  DRIVERS_REPO_PRIVATE_CACERT_FOLDER 	 string, default path is /opt/falco-driver-loader/ca-certificates "
+	echo "  DRIVERS_REPO_PRIVATE_CACERT_FILENAME string, whether you want to use a custom CAcert for curl"
+	echo "  DRIVERS_REPO_PRIVATE_CACERT_CONTENT  string, the CA certificate as a one line base64 encoded string. You can generate one with: $ cat tls.crt | base64 -i --wrap 0 > tls.b64.oneline.crt"
 	echo ""
 	echo "Versions:"
 	echo "  Falco version  ${FALCO_VERSION}"
@@ -622,10 +626,19 @@ fi
 KERNEL_VERSION=$(uname -v | sed 's/#\([[:digit:]]\+\).*/\1/')
 
 DRIVERS_REPO=${DRIVERS_REPO:-"@DRIVERS_REPO@"}
+DRIVERS_REPO_PRIVATE_CACERT_FOLDER=${DRIVERS_REPO_PRIVATE_CACERT_FOLDER:-"/opt/falco-driver-loader/ca-certificates"}
+DRIVERS_REPO_PRIVATE_CACERT_FILENAME=${DRIVERS_REPO_PRIVATE_CACERT_FILENAME:-"cacert.pem"}
+DRIVERS_REPO_PRIVATE_CACERT_CONTENT=${DRIVERS_REPO_PRIVATE_CACERT_CONTENT:-"@DRIVERS_REPO_PRIVATE_CACERT_CONTENT@"}
 
 if [ -n "$DRIVER_INSECURE_DOWNLOAD" ]
 then
 	FALCO_DRIVER_CURL_OPTIONS=-fsSk
+elif [ -n "$DRIVERS_REPO_IS_PRIVATE_CACERT" ]
+then
+	mkdir -p $DRIVERS_REPO_PRIVATE_CACERT_FOLDER
+	touch $DRIVERS_REPO_PRIVATE_CACERT_FOLDER/$DRIVERS_REPO_PRIVATE_CACERT_FILENAME
+	echo $DRIVERS_REPO_PRIVATE_CACERT_CONTENT | base64 -d > $DRIVERS_REPO_PRIVATE_CACERT_FOLDER/$DRIVERS_REPO_PRIVATE_CACERT_FILENAME
+	FALCO_DRIVER_CURL_OPTIONS=-fsS --cacert $DRIVERS_REPO_PRIVATE_CACERT_FOLDER/$DRIVERS_REPO_PRIVATE_CACERT_FILENAME
 else
 	FALCO_DRIVER_CURL_OPTIONS=-fsS
 fi
